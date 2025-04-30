@@ -100,3 +100,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Fix for select dropdown appearing behind content */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
+/* Ensure all portals are on top */
+[data-radix-portal] {
+  z-index: 9999 !important;
+}
+
+/* Fix for Radix UI Select component */
+[role="listbox"] {
+  z-index: 9999 !important;
+  position: relative !important;
+  display: block !important;
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+}
+
+/* Ensure dropdown has solid background */
+[data-radix-select-content] {
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  backdrop-filter: none !important;
+}

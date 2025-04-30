@@ -66,6 +66,8 @@ const formSchema = z.object({
   brandStyleOther: z.string().optional(),
   currentFonts: z.string().optional(),
   brandInspirations: z.string().optional(),
+  hasLogo: z.enum(["yes", "no", "in-progress"]).optional(),
+  logoUpload: z.string().optional(),
 
   // Website Requirements
   websitePurpose: z.enum([
@@ -82,14 +84,19 @@ const formSchema = z.object({
     .min(2, { message: "Please describe your target audience." }),
   keyFeatures: z.array(z.string()).optional(),
   customFeatures: z.string().optional(),
+  desiredPages: z.string().optional(),
   expectedPages: z
     .string()
     .min(1, { message: "Please estimate the number of pages." }),
   contentReady: z.enum(["yes", "partially", "no"]),
+  contentUpload: z.string().optional(),
+  desiredLaunchDate: z.string().optional(),
   seoRequirements: z.string().optional(),
 
   // Technical Details
   domainStatus: z.enum(["owned", "need-to-purchase", "unsure"]),
+  existingDomain: z.string().optional(),
+  preferredDomain: z.string().optional(),
   hostingPreference: z.enum(["recommend", "have-provider", "unsure"]),
   existingProvider: z.string().optional(),
   integrations: z.array(z.string()).optional(),
@@ -98,10 +105,11 @@ const formSchema = z.object({
 
   // Project Parameters
   budgetRange: z.enum([
-    "under5k",
-    "5k-10k",
-    "10k-20k",
-    "20k-plus",
+    "under1000",
+    "1000-3000",
+    "3000-5000",
+    "5000-10000",
+    "over10000",
     "undecided",
   ]),
   timeline: z.enum(["urgent", "1-2months", "3-6months", "6plus", "flexible"]),
@@ -153,8 +161,12 @@ export default function ClientIntakeForm() {
   });
 
   const watchNewsletterConsent = watch("newsletterConsent");
+  const watchDomainStatus = watch("domainStatus");
   const watchBrandStyle = watch("brandStyle");
   const watchWebsitePurpose = watch("websitePurpose");
+  const watchHostingPreference = watch("hostingPreference");
+  const watchHasLogo = watch("hasLogo");
+  const watchContentReady = watch("contentReady");
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -440,6 +452,46 @@ export default function ClientIntakeForm() {
                   rows={3}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Do you have an existing logo? *</Label>
+                <RadioGroup
+                  defaultValue="no"
+                  value={watchHasLogo}
+                  onValueChange={(value) => setValue("hasLogo", value as any)}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="yes" id="logo-yes" />
+                    <Label htmlFor="logo-yes">Yes</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="no" id="logo-no" />
+                    <Label htmlFor="logo-no">No</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="in-progress" id="logo-in-progress" />
+                    <Label htmlFor="logo-in-progress">
+                      In progress/development
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {watchHasLogo === "yes" && (
+                <div className="space-y-2">
+                  <Label htmlFor="logoUpload">Upload Your Logo</Label>
+                  <Input
+                    id="logoUpload"
+                    type="file"
+                    accept="image/*"
+                    {...register("logoUpload")}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Please upload your logo in a high-quality format (PNG, SVG,
+                    or AI preferred).
+                  </p>
+                </div>
+              )}
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button
@@ -655,6 +707,16 @@ export default function ClientIntakeForm() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="desiredPages">Desired Pages</Label>
+                <Textarea
+                  id="desiredPages"
+                  {...register("desiredPages")}
+                  placeholder="List all the pages you want on your website (e.g., Home, About, Services, Contact, etc.)"
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="expectedPages">
                   Estimated Number of Pages *
                 </Label>
@@ -671,10 +733,26 @@ export default function ClientIntakeForm() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="desiredLaunchDate">Desired Launch Date</Label>
+                <Input
+                  id="desiredLaunchDate"
+                  type="date"
+                  {...register("desiredLaunchDate")}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  When would you like your website to go live? This helps us
+                  plan the project timeline.
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Is Your Content Ready? *</Label>
                 <RadioGroup
                   defaultValue="partially"
-                  {...register("contentReady")}
+                  value={watchContentReady}
+                  onValueChange={(value) =>
+                    setValue("contentReady", value as any)
+                  }
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="yes" id="content-yes" />
@@ -694,6 +772,22 @@ export default function ClientIntakeForm() {
                   </div>
                 </RadioGroup>
               </div>
+
+              {watchContentReady === "yes" && (
+                <div className="space-y-2">
+                  <Label htmlFor="contentUpload">Upload Your Content</Label>
+                  <Input
+                    id="contentUpload"
+                    type="file"
+                    multiple
+                    {...register("contentUpload")}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Upload your content files (text documents, images, etc.).
+                    You can select multiple files.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="seoRequirements">SEO Requirements</Label>
@@ -732,7 +826,13 @@ export default function ClientIntakeForm() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Domain Status *</Label>
-                <RadioGroup defaultValue="unsure" {...register("domainStatus")}>
+                <RadioGroup
+                  defaultValue="unsure"
+                  value={watchDomainStatus}
+                  onValueChange={(value) =>
+                    setValue("domainStatus", value as any)
+                  }
+                >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="owned" id="domain-owned" />
                     <Label htmlFor="domain-owned">I already own a domain</Label>
@@ -753,11 +853,40 @@ export default function ClientIntakeForm() {
                 </RadioGroup>
               </div>
 
+              {watchDomainStatus === "owned" && (
+                <div className="space-y-2">
+                  <Label htmlFor="existingDomain">Your Domain Name</Label>
+                  <Input
+                    id="existingDomain"
+                    {...register("existingDomain")}
+                    placeholder="e.g., yourbusiness.com"
+                  />
+                </div>
+              )}
+
+              {watchDomainStatus === "need-to-purchase" && (
+                <div className="space-y-2">
+                  <Label htmlFor="preferredDomain">Preferred Domain Name</Label>
+                  <Input
+                    id="preferredDomain"
+                    {...register("preferredDomain")}
+                    placeholder="e.g., yourbusiness.com (without www)"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter your preferred domain name. We'll check availability
+                    during our consultation.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Hosting Preference *</Label>
                 <RadioGroup
                   defaultValue="recommend"
-                  {...register("hostingPreference")}
+                  value={watchHostingPreference}
+                  onValueChange={(value) =>
+                    setValue("hostingPreference", value as any)
+                  }
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="recommend" id="hosting-recommend" />
@@ -778,16 +907,18 @@ export default function ClientIntakeForm() {
                 </RadioGroup>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="existingProvider">
-                  Existing Provider (if any)
-                </Label>
-                <Input
-                  id="existingProvider"
-                  {...register("existingProvider")}
-                  placeholder="e.g., GoDaddy, Bluehost, etc."
-                />
-              </div>
+              {watchHostingPreference === "have-provider" && (
+                <div className="space-y-2">
+                  <Label htmlFor="existingProvider">
+                    Your Hosting Provider
+                  </Label>
+                  <Input
+                    id="existingProvider"
+                    {...register("existingProvider")}
+                    placeholder="e.g., GoDaddy, Bluehost, etc."
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Integration Requirements</Label>
@@ -998,20 +1129,24 @@ export default function ClientIntakeForm() {
                   {...register("budgetRange")}
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="under5k" id="budget-under5k" />
-                    <Label htmlFor="budget-under5k">Under $5,000</Label>
+                    <RadioGroupItem value="under1000" id="budget-under1000" />
+                    <Label htmlFor="budget-under1000">Under $1,000</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="5k-10k" id="budget-5k-10k" />
-                    <Label htmlFor="budget-5k-10k">$5,000 - $10,000</Label>
+                    <RadioGroupItem value="1000-3000" id="budget-1000-3000" />
+                    <Label htmlFor="budget-1000-3000">$1,000 - $3,000</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="10k-20k" id="budget-10k-20k" />
-                    <Label htmlFor="budget-10k-20k">$10,000 - $20,000</Label>
+                    <RadioGroupItem value="3000-5000" id="budget-3000-5000" />
+                    <Label htmlFor="budget-3000-5000">$3,000 - $5,000</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="20k-plus" id="budget-20k-plus" />
-                    <Label htmlFor="budget-20k-plus">$20,000+</Label>
+                    <RadioGroupItem value="5000-10000" id="budget-5000-10000" />
+                    <Label htmlFor="budget-5000-10000">$5,000 - $10,000</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="over10000" id="budget-over10000" />
+                    <Label htmlFor="budget-over10000">Over $10,000</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="undecided" id="budget-undecided" />
@@ -1129,7 +1264,8 @@ export default function ClientIntakeForm() {
                   }}
                 />
                 <Label htmlFor="newsletterConsent">
-                  I'd like to receive updates, tips, and occasional newsletters
+                  I'd like to receive updates, tips, and occasional emails and
+                  newsletters
                 </Label>
               </div>
 
