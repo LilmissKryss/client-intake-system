@@ -1,0 +1,1183 @@
+"use client";
+
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, Resolver } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
+
+const formSchema = z.object({
+  // Basic Information
+  businessName: z
+    .string()
+    .min(2, { message: "Business name must be at least 2 characters." }),
+  website: z
+    .string()
+    .url({ message: "Please enter a valid URL." })
+    .optional()
+    .or(z.literal("")),
+  industry: z.string().min(2, { message: "Please specify your industry." }),
+  contactName: z
+    .string()
+    .min(2, { message: "Contact name must be at least 2 characters." }),
+  contactEmail: z
+    .string()
+    .email({ message: "Please enter a valid email address." }),
+  contactPhone: z
+    .string()
+    .min(10, { message: "Please enter a valid phone number." }),
+  preferredContact: z.enum(["email", "phone", "either"]),
+
+  // Branding Information
+  brandColors: z.string().optional(),
+  brandStyle: z.enum([
+    "modern",
+    "traditional",
+    "playful",
+    "serious",
+    "minimalist",
+    "luxury",
+    "other",
+  ]),
+  brandStyleOther: z.string().optional(),
+  currentFonts: z.string().optional(),
+  brandInspirations: z.string().optional(),
+
+  // Website Requirements
+  websitePurpose: z.enum([
+    "informational",
+    "ecommerce",
+    "portfolio",
+    "blog",
+    "service",
+    "other",
+  ]),
+  purposeOther: z.string().optional(),
+  targetAudience: z
+    .string()
+    .min(2, { message: "Please describe your target audience." }),
+  keyFeatures: z.array(z.string()).optional(),
+  customFeatures: z.string().optional(),
+  expectedPages: z
+    .string()
+    .min(1, { message: "Please estimate the number of pages." }),
+  contentReady: z.enum(["yes", "partially", "no"]),
+  seoRequirements: z.string().optional(),
+
+  // Technical Details
+  domainStatus: z.enum(["owned", "need-to-purchase", "unsure"]),
+  hostingPreference: z.enum(["recommend", "have-provider", "unsure"]),
+  existingProvider: z.string().optional(),
+  integrations: z.array(z.string()).optional(),
+  customIntegrations: z.string().optional(),
+  analyticsNeeds: z.array(z.string()).optional(),
+
+  // Project Parameters
+  budgetRange: z.enum([
+    "under5k",
+    "5k-10k",
+    "10k-20k",
+    "20k-plus",
+    "undecided",
+  ]),
+  timeline: z.enum(["urgent", "1-2months", "3-6months", "6plus", "flexible"]),
+  maintenanceNeeds: z.enum([
+    "none",
+    "updates-only",
+    "full-service",
+    "undecided",
+  ]),
+  additionalInfo: z.string().optional(),
+
+  // Marketing Consent
+  newsletterConsent: z.boolean().default(false),
+  marketingFrequency: z.enum(["weekly", "monthly", "quarterly"]).optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+export default function ClientIntakeForm() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentTab, setCurrentTab] = useState("basic");
+  const [formSuccess, setFormSuccess] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    control,
+    watch,
+    setValue,
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema) as Resolver<FormValues>,
+    defaultValues: {
+      preferredContact: "email",
+      brandStyle: "modern",
+      websitePurpose: "informational",
+      contentReady: "partially",
+      domainStatus: "unsure",
+      hostingPreference: "recommend",
+      budgetRange: "undecided",
+      timeline: "flexible",
+      maintenanceNeeds: "undecided",
+      keyFeatures: [],
+      integrations: [],
+      analyticsNeeds: [],
+      newsletterConsent: false,
+      marketingFrequency: "monthly",
+    },
+  });
+
+  const watchNewsletterConsent = watch("newsletterConsent");
+  const watchBrandStyle = watch("brandStyle");
+  const watchWebsitePurpose = watch("websitePurpose");
+
+  const onSubmit = async (data: FormValues) => {
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      setFormSuccess(true);
+      toast({
+        title: "Form submitted successfully!",
+        description:
+          "We've received your information and will be in touch soon.",
+        duration: 5000,
+      });
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast({
+        title: "Something went wrong",
+        description: "Your form couldn't be submitted. Please try again later.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const { toast } = useToast();
+
+  if (formSuccess) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Thank You!</CardTitle>
+          <CardDescription>
+            Your information has been submitted successfully.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertDescription>
+              We've sent a confirmation email to your provided email address.
+              Our team will review your requirements and contact you shortly.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={() => {
+              setFormSuccess(false);
+              setCurrentTab("basic");
+              // Reset form here if needed
+            }}
+          >
+            Submit Another Response
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <Tabs value={currentTab} onValueChange={setCurrentTab}>
+        <TabsList className="grid grid-cols-6 mb-8">
+          <TabsTrigger value="basic">Basic Info</TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="website">Website Needs</TabsTrigger>
+          <TabsTrigger value="technical">Technical</TabsTrigger>
+          <TabsTrigger value="project">Project Details</TabsTrigger>
+          <TabsTrigger value="marketing">Marketing</TabsTrigger>
+        </TabsList>
+
+        {/* Basic Information Tab */}
+        <TabsContent value="basic">
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+              <CardDescription>
+                Let's start with some basic information about your business.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="businessName">Business Name *</Label>
+                <Input
+                  id="businessName"
+                  {...register("businessName")}
+                  placeholder="Your Business Name"
+                />
+                {errors.businessName && (
+                  <p className="text-sm text-red-500">
+                    {errors.businessName.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="website">Current Website (if any)</Label>
+                <Input
+                  id="website"
+                  {...register("website")}
+                  placeholder="https://example.com"
+                />
+                {errors.website && (
+                  <p className="text-sm text-red-500">
+                    {errors.website.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="industry">Industry/Sector *</Label>
+                <Input
+                  id="industry"
+                  {...register("industry")}
+                  placeholder="e.g., Restaurant, Healthcare, Retail"
+                />
+                {errors.industry && (
+                  <p className="text-sm text-red-500">
+                    {errors.industry.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contactName">Contact Person's Name *</Label>
+                  <Input
+                    id="contactName"
+                    {...register("contactName")}
+                    placeholder="Full Name"
+                  />
+                  {errors.contactName && (
+                    <p className="text-sm text-red-500">
+                      {errors.contactName.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contactEmail">Email Address *</Label>
+                  <Input
+                    id="contactEmail"
+                    type="email"
+                    {...register("contactEmail")}
+                    placeholder="email@example.com"
+                  />
+                  {errors.contactEmail && (
+                    <p className="text-sm text-red-500">
+                      {errors.contactEmail.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">Phone Number *</Label>
+                <Input
+                  id="contactPhone"
+                  {...register("contactPhone")}
+                  placeholder="(123) 456-7890"
+                />
+                {errors.contactPhone && (
+                  <p className="text-sm text-red-500">
+                    {errors.contactPhone.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Preferred Contact Method *</Label>
+                <RadioGroup
+                  defaultValue="email"
+                  {...register("preferredContact")}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="email" id="email" />
+                    <Label htmlFor="email">Email</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="phone" id="phone" />
+                    <Label htmlFor="phone">Phone</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="either" id="either" />
+                    <Label htmlFor="either">Either is fine</Label>
+                  </div>
+                </RadioGroup>
+                {errors.preferredContact && (
+                  <p className="text-sm text-red-500">
+                    {errors.preferredContact.message}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="button" onClick={() => setCurrentTab("branding")}>
+                Next: Branding Information
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Branding Information Tab */}
+        <TabsContent value="branding">
+          <Card>
+            <CardHeader>
+              <CardTitle>Branding Information</CardTitle>
+              <CardDescription>
+                Tell us about your brand identity and style.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="brandColors">
+                  Brand Colors (if established)
+                </Label>
+                <Input
+                  id="brandColors"
+                  {...register("brandColors")}
+                  placeholder="e.g., #FF5733, Blue and White, etc."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Brand Style *</Label>
+                <Select
+                  defaultValue="modern"
+                  onValueChange={(value) =>
+                    setValue("brandStyle", value as any)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="modern">Modern</SelectItem>
+                    <SelectItem value="traditional">Traditional</SelectItem>
+                    <SelectItem value="playful">Playful</SelectItem>
+                    <SelectItem value="serious">Serious/Corporate</SelectItem>
+                    <SelectItem value="minimalist">Minimalist</SelectItem>
+                    <SelectItem value="luxury">Luxury</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {watchBrandStyle === "other" && (
+                  <div className="mt-2">
+                    <Input
+                      placeholder="Please specify your brand style"
+                      {...register("brandStyleOther")}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currentFonts">Current Fonts (if known)</Label>
+                <Input
+                  id="currentFonts"
+                  {...register("currentFonts")}
+                  placeholder="e.g., Arial, Helvetica, custom font names"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="brandInspirations">Brand Inspirations</Label>
+                <Textarea
+                  id="brandInspirations"
+                  {...register("brandInspirations")}
+                  placeholder="List websites or brands whose style you admire"
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentTab("basic")}
+              >
+                Previous
+              </Button>
+              <Button type="button" onClick={() => setCurrentTab("website")}>
+                Next: Website Requirements
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Website Requirements Tab */}
+        <TabsContent value="website">
+          <Card>
+            <CardHeader>
+              <CardTitle>Website Requirements</CardTitle>
+              <CardDescription>
+                Help us understand what you need in your website.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Website Purpose *</Label>
+                <Select
+                  defaultValue="informational"
+                  onValueChange={(value) =>
+                    setValue("websitePurpose", value as any)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a purpose" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="informational">Informational</SelectItem>
+                    <SelectItem value="ecommerce">E-commerce</SelectItem>
+                    <SelectItem value="portfolio">Portfolio</SelectItem>
+                    <SelectItem value="blog">Blog</SelectItem>
+                    <SelectItem value="service">Service Booking</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {watchWebsitePurpose === "other" && (
+                  <div className="mt-2">
+                    <Input
+                      placeholder="Please specify your website purpose"
+                      {...register("purposeOther")}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="targetAudience">Target Audience *</Label>
+                <Textarea
+                  id="targetAudience"
+                  {...register("targetAudience")}
+                  placeholder="Describe who your website is targeting"
+                  rows={2}
+                />
+                {errors.targetAudience && (
+                  <p className="text-sm text-red-500">
+                    {errors.targetAudience.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Key Features Needed</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="contact-form"
+                      onCheckedChange={(checked) => {
+                        const currentFeatures = watch("keyFeatures") || [];
+                        if (checked) {
+                          setValue("keyFeatures", [
+                            ...currentFeatures,
+                            "contact-form",
+                          ]);
+                        } else {
+                          setValue(
+                            "keyFeatures",
+                            currentFeatures.filter((f) => f !== "contact-form")
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="contact-form">Contact Form</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="blog"
+                      onCheckedChange={(checked) => {
+                        const currentFeatures = watch("keyFeatures") || [];
+                        if (checked) {
+                          setValue("keyFeatures", [...currentFeatures, "blog"]);
+                        } else {
+                          setValue(
+                            "keyFeatures",
+                            currentFeatures.filter((f) => f !== "blog")
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="blog">Blog</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="product-catalog"
+                      onCheckedChange={(checked) => {
+                        const currentFeatures = watch("keyFeatures") || [];
+                        if (checked) {
+                          setValue("keyFeatures", [
+                            ...currentFeatures,
+                            "product-catalog",
+                          ]);
+                        } else {
+                          setValue(
+                            "keyFeatures",
+                            currentFeatures.filter(
+                              (f) => f !== "product-catalog"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="product-catalog">Product Catalog</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="photo-gallery"
+                      onCheckedChange={(checked) => {
+                        const currentFeatures = watch("keyFeatures") || [];
+                        if (checked) {
+                          setValue("keyFeatures", [
+                            ...currentFeatures,
+                            "photo-gallery",
+                          ]);
+                        } else {
+                          setValue(
+                            "keyFeatures",
+                            currentFeatures.filter((f) => f !== "photo-gallery")
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="photo-gallery">Photo Gallery</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="testimonials"
+                      onCheckedChange={(checked) => {
+                        const currentFeatures = watch("keyFeatures") || [];
+                        if (checked) {
+                          setValue("keyFeatures", [
+                            ...currentFeatures,
+                            "testimonials",
+                          ]);
+                        } else {
+                          setValue(
+                            "keyFeatures",
+                            currentFeatures.filter((f) => f !== "testimonials")
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="testimonials">Testimonials</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="booking-system"
+                      onCheckedChange={(checked) => {
+                        const currentFeatures = watch("keyFeatures") || [];
+                        if (checked) {
+                          setValue("keyFeatures", [
+                            ...currentFeatures,
+                            "booking-system",
+                          ]);
+                        } else {
+                          setValue(
+                            "keyFeatures",
+                            currentFeatures.filter(
+                              (f) => f !== "booking-system"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="booking-system">Booking System</Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customFeatures">Other Features</Label>
+                <Textarea
+                  id="customFeatures"
+                  {...register("customFeatures")}
+                  placeholder="List any other features you need"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="expectedPages">
+                  Estimated Number of Pages *
+                </Label>
+                <Input
+                  id="expectedPages"
+                  {...register("expectedPages")}
+                  placeholder="e.g., 5, 10-15"
+                />
+                {errors.expectedPages && (
+                  <p className="text-sm text-red-500">
+                    {errors.expectedPages.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Is Your Content Ready? *</Label>
+                <RadioGroup
+                  defaultValue="partially"
+                  {...register("contentReady")}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="yes" id="content-yes" />
+                    <Label htmlFor="content-yes">
+                      Yes, all content is ready
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="partially" id="content-partially" />
+                    <Label htmlFor="content-partially">Partially ready</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="no" id="content-no" />
+                    <Label htmlFor="content-no">
+                      No, need help with content
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="seoRequirements">SEO Requirements</Label>
+                <Textarea
+                  id="seoRequirements"
+                  {...register("seoRequirements")}
+                  placeholder="Describe any specific SEO requirements or goals"
+                  rows={2}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentTab("branding")}
+              >
+                Previous
+              </Button>
+              <Button type="button" onClick={() => setCurrentTab("technical")}>
+                Next: Technical Details
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Technical Details Tab */}
+        <TabsContent value="technical">
+          <Card>
+            <CardHeader>
+              <CardTitle>Technical Details</CardTitle>
+              <CardDescription>
+                Let's gather some technical information about your project.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Domain Status *</Label>
+                <RadioGroup defaultValue="unsure" {...register("domainStatus")}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="owned" id="domain-owned" />
+                    <Label htmlFor="domain-owned">I already own a domain</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="need-to-purchase"
+                      id="domain-purchase"
+                    />
+                    <Label htmlFor="domain-purchase">
+                      Need to purchase a domain
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="unsure" id="domain-unsure" />
+                    <Label htmlFor="domain-unsure">Not sure</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Hosting Preference *</Label>
+                <RadioGroup
+                  defaultValue="recommend"
+                  {...register("hostingPreference")}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="recommend" id="hosting-recommend" />
+                    <Label htmlFor="hosting-recommend">
+                      Please recommend hosting
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="have-provider" id="hosting-have" />
+                    <Label htmlFor="hosting-have">
+                      I have a hosting provider
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="unsure" id="hosting-unsure" />
+                    <Label htmlFor="hosting-unsure">Not sure</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="existingProvider">
+                  Existing Provider (if any)
+                </Label>
+                <Input
+                  id="existingProvider"
+                  {...register("existingProvider")}
+                  placeholder="e.g., GoDaddy, Bluehost, etc."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Integration Requirements</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="crm"
+                      onCheckedChange={(checked) => {
+                        const currentIntegrations = watch("integrations") || [];
+                        if (checked) {
+                          setValue("integrations", [
+                            ...currentIntegrations,
+                            "crm",
+                          ]);
+                        } else {
+                          setValue(
+                            "integrations",
+                            currentIntegrations.filter((i) => i !== "crm")
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="crm">CRM System</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="payment-gateway"
+                      onCheckedChange={(checked) => {
+                        const currentIntegrations = watch("integrations") || [];
+                        if (checked) {
+                          setValue("integrations", [
+                            ...currentIntegrations,
+                            "payment-gateway",
+                          ]);
+                        } else {
+                          setValue(
+                            "integrations",
+                            currentIntegrations.filter(
+                              (i) => i !== "payment-gateway"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="payment-gateway">Payment Gateway</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="social-media"
+                      onCheckedChange={(checked) => {
+                        const currentIntegrations = watch("integrations") || [];
+                        if (checked) {
+                          setValue("integrations", [
+                            ...currentIntegrations,
+                            "social-media",
+                          ]);
+                        } else {
+                          setValue(
+                            "integrations",
+                            currentIntegrations.filter(
+                              (i) => i !== "social-media"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="social-media">Social Media</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="mailing-list"
+                      onCheckedChange={(checked) => {
+                        const currentIntegrations = watch("integrations") || [];
+                        if (checked) {
+                          setValue("integrations", [
+                            ...currentIntegrations,
+                            "mailing-list",
+                          ]);
+                        } else {
+                          setValue(
+                            "integrations",
+                            currentIntegrations.filter(
+                              (i) => i !== "mailing-list"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="mailing-list">Mailing List</Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customIntegrations">Other Integrations</Label>
+                <Textarea
+                  id="customIntegrations"
+                  {...register("customIntegrations")}
+                  placeholder="List any other specific integrations you need"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Analytics Needs</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="google-analytics"
+                      onCheckedChange={(checked) => {
+                        const currentAnalytics = watch("analyticsNeeds") || [];
+                        if (checked) {
+                          setValue("analyticsNeeds", [
+                            ...currentAnalytics,
+                            "google-analytics",
+                          ]);
+                        } else {
+                          setValue(
+                            "analyticsNeeds",
+                            currentAnalytics.filter(
+                              (a) => a !== "google-analytics"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="google-analytics">Google Analytics</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="facebook-pixel"
+                      onCheckedChange={(checked) => {
+                        const currentAnalytics = watch("analyticsNeeds") || [];
+                        if (checked) {
+                          setValue("analyticsNeeds", [
+                            ...currentAnalytics,
+                            "facebook-pixel",
+                          ]);
+                        } else {
+                          setValue(
+                            "analyticsNeeds",
+                            currentAnalytics.filter(
+                              (a) => a !== "facebook-pixel"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="facebook-pixel">Facebook Pixel</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="heat-maps"
+                      onCheckedChange={(checked) => {
+                        const currentAnalytics = watch("analyticsNeeds") || [];
+                        if (checked) {
+                          setValue("analyticsNeeds", [
+                            ...currentAnalytics,
+                            "heat-maps",
+                          ]);
+                        } else {
+                          setValue(
+                            "analyticsNeeds",
+                            currentAnalytics.filter((a) => a !== "heat-maps")
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="heat-maps">Heat Maps</Label>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentTab("website")}
+              >
+                Previous
+              </Button>
+              <Button type="button" onClick={() => setCurrentTab("project")}>
+                Next: Project Parameters
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Project Parameters Tab */}
+        <TabsContent value="project">
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Parameters</CardTitle>
+              <CardDescription>
+                Help us understand your timeline and budget constraints.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Budget Range *</Label>
+                <RadioGroup
+                  defaultValue="undecided"
+                  {...register("budgetRange")}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="under5k" id="budget-under5k" />
+                    <Label htmlFor="budget-under5k">Under $5,000</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="5k-10k" id="budget-5k-10k" />
+                    <Label htmlFor="budget-5k-10k">$5,000 - $10,000</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="10k-20k" id="budget-10k-20k" />
+                    <Label htmlFor="budget-10k-20k">$10,000 - $20,000</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="20k-plus" id="budget-20k-plus" />
+                    <Label htmlFor="budget-20k-plus">$20,000+</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="undecided" id="budget-undecided" />
+                    <Label htmlFor="budget-undecided">Undecided/Flexible</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Timeline Expectations *</Label>
+                <RadioGroup defaultValue="flexible" {...register("timeline")}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="urgent" id="timeline-urgent" />
+                    <Label htmlFor="timeline-urgent">Urgent (ASAP)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="1-2months" id="timeline-1-2months" />
+                    <Label htmlFor="timeline-1-2months">1-2 Months</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="3-6months" id="timeline-3-6months" />
+                    <Label htmlFor="timeline-3-6months">3-6 Months</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="6plus" id="timeline-6plus" />
+                    <Label htmlFor="timeline-6plus">6+ Months</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="flexible" id="timeline-flexible" />
+                    <Label htmlFor="timeline-flexible">Flexible</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Maintenance Needs After Launch *</Label>
+                <RadioGroup
+                  defaultValue="undecided"
+                  {...register("maintenanceNeeds")}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="none" id="maintenance-none" />
+                    <Label htmlFor="maintenance-none">None needed</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="updates-only"
+                      id="maintenance-updates"
+                    />
+                    <Label htmlFor="maintenance-updates">
+                      Occasional updates only
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="full-service"
+                      id="maintenance-full"
+                    />
+                    <Label htmlFor="maintenance-full">
+                      Full-service maintenance
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="undecided"
+                      id="maintenance-undecided"
+                    />
+                    <Label htmlFor="maintenance-undecided">Undecided</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="additionalInfo">Additional Information</Label>
+                <Textarea
+                  id="additionalInfo"
+                  {...register("additionalInfo")}
+                  placeholder="Anything else you'd like us to know about your project?"
+                  rows={4}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentTab("technical")}
+              >
+                Previous
+              </Button>
+              <Button type="button" onClick={() => setCurrentTab("marketing")}>
+                Next: Marketing Preferences
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Marketing Preferences Tab */}
+        <TabsContent value="marketing">
+          <Card>
+            <CardHeader>
+              <CardTitle>Marketing Preferences</CardTitle>
+              <CardDescription>
+                Let us know if you'd like to receive occasional updates and
+                tips.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="newsletterConsent"
+                  checked={watchNewsletterConsent}
+                  onCheckedChange={(checked) => {
+                    setValue("newsletterConsent", checked as boolean);
+                  }}
+                />
+                <Label htmlFor="newsletterConsent">
+                  I'd like to receive updates, tips, and occasional newsletters
+                </Label>
+              </div>
+
+              {watchNewsletterConsent && (
+                <div className="space-y-2 pl-6">
+                  <Label>Preferred Frequency</Label>
+                  <RadioGroup
+                    defaultValue="monthly"
+                    {...register("marketingFrequency")}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="weekly" id="freq-weekly" />
+                      <Label htmlFor="freq-weekly">Weekly</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="monthly" id="freq-monthly" />
+                      <Label htmlFor="freq-monthly">Monthly</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="quarterly" id="freq-quarterly" />
+                      <Label htmlFor="freq-quarterly">Quarterly</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentTab("project")}
+              >
+                Previous
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Intake Form"
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </form>
+  );
+}
