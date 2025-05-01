@@ -28,6 +28,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   // Basic Information
@@ -127,7 +128,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function ClientIntakeForm() {
-  // We're using window.location.href for redirection instead of the router
+  const router = useRouter(); // Initialize the router for programmatic navigation
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTab, setCurrentTab] = useState("basic");
   const [tabsWithErrors, setTabsWithErrors] = useState<string[]>([]);
@@ -235,6 +236,30 @@ export default function ClientIntakeForm() {
     }
 
     try {
+      console.log("Submitting form data to API...");
+
+      // Submit the form data to the API and await the response
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      // Wait for the JSON response
+      const result = await response.json();
+      console.log("API response:", result);
+
+      // Ensure the API call is complete (which includes email sending)
+      if (!result.success) {
+        throw new Error("Form submission was not successful");
+      }
+
       // Show success toast
       toast({
         title: "Form submitted successfully!",
@@ -249,10 +274,12 @@ export default function ClientIntakeForm() {
       );
 
       // Use setTimeout to ensure the toast is visible before redirecting
+      // This delay gives time for the email sending process to complete
       setTimeout(() => {
-        // Use plain JavaScript redirect for maximum compatibility
-        window.location.href = "/thank-you";
-      }, 1000);
+        console.log("Executing redirect using Next.js router");
+        // Use Next.js router for programmatic navigation
+        router.push("/thank-you");
+      }, 2000); // Increased timeout to ensure emails have time to be sent
     } catch (error) {
       console.error("Submission error:", error);
       toast({
@@ -267,13 +294,6 @@ export default function ClientIntakeForm() {
   };
 
   const { toast } = useToast();
-
-  // Debug submission
-  const debugSubmit = () => {
-    console.log("Form submission attempted");
-    console.log("Current errors:", errors);
-    console.log("Form values:", watch());
-  };
 
   // We're now redirecting to a dedicated thank you page instead of showing an inline success message
 
@@ -594,8 +614,7 @@ export default function ClientIntakeForm() {
                 <div className="space-y-2">
                   <Label>Do you have an existing logo? *</Label>
                   <RadioGroup
-                    defaultValue="no"
-                    value={watchHasLogo}
+                    value={watchHasLogo || "no"}
                     onValueChange={(value) => setValue("hasLogo", value as any)}
                   >
                     <div className="flex items-center space-x-2">
@@ -987,8 +1006,7 @@ export default function ClientIntakeForm() {
                 <div className="space-y-2">
                   <Label>Domain Status *</Label>
                   <RadioGroup
-                    defaultValue="unsure"
-                    value={watchDomainStatus}
+                    value={watchDomainStatus || "unsure"}
                     onValueChange={(value) =>
                       setValue("domainStatus", value as any)
                     }
@@ -1046,8 +1064,7 @@ export default function ClientIntakeForm() {
                 <div className="space-y-2">
                   <Label>Hosting Preference *</Label>
                   <RadioGroup
-                    defaultValue="recommend"
-                    value={watchHostingPreference}
+                    value={watchHostingPreference || "recommend"}
                     onValueChange={(value) =>
                       setValue("hostingPreference", value as any)
                     }
@@ -1477,67 +1494,7 @@ export default function ClientIntakeForm() {
                   Previous
                 </Button>
                 <div className="space-y-4">
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    onClick={() => {
-                      debugSubmit();
-
-                      // Check for errors in each tab
-                      const errorTabs = [];
-
-                      // Basic tab errors
-                      if (
-                        errors.businessName ||
-                        errors.industry ||
-                        errors.contactName ||
-                        errors.contactEmail ||
-                        errors.contactPhone ||
-                        errors.preferredContact
-                      ) {
-                        errorTabs.push("basic");
-                      }
-
-                      // Website tab errors
-                      if (errors.targetAudience || errors.expectedPages) {
-                        errorTabs.push("website");
-                      }
-
-                      // Technical tab errors
-                      if (errors.domainStatus || errors.hostingPreference) {
-                        errorTabs.push("technical");
-                      }
-
-                      // Project tab errors
-                      if (
-                        errors.budgetRange ||
-                        errors.timeline ||
-                        errors.maintenanceNeeds
-                      ) {
-                        errorTabs.push("project");
-                      }
-
-                      // Marketing tab errors
-                      if (errors.newsletterConsent) {
-                        errorTabs.push("marketing");
-                      }
-
-                      // Update the state with tabs that have errors
-                      setTabsWithErrors(errorTabs);
-
-                      // Show a toast if there are errors
-                      if (errorTabs.length > 0) {
-                        toast({
-                          title: "Form has errors",
-                          description: `Please check the following tabs: ${errorTabs.join(
-                            ", "
-                          )}`,
-                          variant: "destructive",
-                          duration: 5000,
-                        });
-                      }
-                    }}
-                  >
+                  <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
