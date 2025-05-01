@@ -19,9 +19,6 @@ export async function POST(request: Request) {
         contactPhone: data.contactPhone,
         preferredContact: data.preferredContact,
         newsletterConsent: data.newsletterConsent,
-        marketingFrequency: data.newsletterConsent
-          ? data.marketingFrequency
-          : null,
         createdAt: new Date(),
       },
     });
