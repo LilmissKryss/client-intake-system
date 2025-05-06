@@ -1,7 +1,20 @@
 import Link from "next/link";
+import { Metadata } from "next";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Thank You | Website Project Intake Form",
+  description: "Your project information has been successfully submitted",
+};
 
 export default function ThankYouPage() {
   return (
@@ -21,23 +34,27 @@ export default function ThankYouPage() {
             <h3 className="text-xl font-medium mb-4">What happens next?</h3>
             <ol className="text-left space-y-4 list-decimal list-inside">
               <li>Our team will review your project details</li>
-              <li>We'll prepare some initial thoughts and questions about your project</li>
+              <li>
+                We'll prepare some initial thoughts and questions about your
+                project
+              </li>
               <li>You'll receive a confirmation email shortly</li>
-              <li>We'll contact you within 1-2 business days to discuss next steps</li>
+              <li>
+                We'll contact you within 1-2 business days to discuss next steps
+              </li>
             </ol>
           </div>
-          
+
           <div>
             <p className="text-muted-foreground">
-              If you have any questions in the meantime, please don't hesitate to reach out.
+              If you have any questions in the meantime, please don't hesitate
+              to reach out.
             </p>
           </div>
         </CardContent>
         <CardFooter className="flex justify-center">
           <Link href="/">
-            <Button size="lg">
-              Return to Home
-            </Button>
+            <Button size="lg">Return to Home</Button>
           </Link>
         </CardFooter>
       </Card>

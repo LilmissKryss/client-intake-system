@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Resolver } from "react-hook-form";
 import * as z from "zod";
@@ -67,7 +67,7 @@ const formSchema = z.object({
   currentFonts: z.string().optional(),
   brandInspirations: z.string().optional(),
   hasLogo: z.enum(["yes", "no", "in-progress"]).optional(),
-  logoUpload: z.string().optional(),
+  logoUpload: z.any().optional(), // Accept any type for file inputs
 
   // Website Requirements
   websitePurpose: z.enum([
@@ -89,7 +89,7 @@ const formSchema = z.object({
     .string()
     .min(1, { message: "Please estimate the number of pages." }),
   contentReady: z.enum(["yes", "partially", "no"]),
-  contentUpload: z.string().optional(),
+  contentUpload: z.any().optional(), // Accept any type for file inputs
   desiredLaunchDate: z.string().optional(),
   seoRequirements: z.string().optional(),
 
@@ -166,8 +166,80 @@ export default function ClientIntakeForm() {
   const watchHasLogo = watch("hasLogo");
   const watchContentReady = watch("contentReady");
 
+  const { toast } = useToast();
+
+  // Monitor changes to tabsWithErrors
+  useEffect(() => {
+    console.log("tabsWithErrors changed:", tabsWithErrors);
+  }, [tabsWithErrors]);
+
+  // We'll use inline debugging instead of a separate function
+
+  // Map tab IDs to their full display names
+  const tabDisplayNames: Record<string, string> = {
+    basic: "Basic Information",
+    branding: "Branding",
+    website: "Website Needs",
+    technical: "Technical Details",
+    project: "Project Details",
+    marketing: "Marketing Preferences",
+  };
+
+  // We use tabDisplayNames directly in the JSX
+
+  // Function to check for missing required fields
+  const checkMissingRequiredFields = () => {
+    const requiredFields = [
+      { name: "businessName", tab: "basic", label: "Business Name" },
+      { name: "industry", tab: "basic", label: "Industry/Sector" },
+      { name: "contactName", tab: "basic", label: "Contact Person's Name" },
+      { name: "contactEmail", tab: "basic", label: "Email Address" },
+      { name: "contactPhone", tab: "basic", label: "Phone Number" },
+      {
+        name: "preferredContact",
+        tab: "basic",
+        label: "Preferred Contact Method",
+      },
+      { name: "targetAudience", tab: "website", label: "Target Audience" },
+      {
+        name: "expectedPages",
+        tab: "website",
+        label: "Estimated Number of Pages",
+      },
+      { name: "domainStatus", tab: "technical", label: "Domain Status" },
+      {
+        name: "hostingPreference",
+        tab: "technical",
+        label: "Hosting Preference",
+      },
+      { name: "budgetRange", tab: "project", label: "Budget Range" },
+      { name: "timeline", tab: "project", label: "Timeline" },
+      { name: "maintenanceNeeds", tab: "project", label: "Maintenance Needs" },
+    ];
+
+    const formValues = watch();
+    const missingFields = requiredFields.filter((field) => {
+      const value = formValues[field.name as keyof FormValues];
+      return !value || (typeof value === "string" && value.trim() === "");
+    });
+
+    // Group missing fields by tab
+    const missingByTab = missingFields.reduce((acc, field) => {
+      if (!acc[field.tab]) {
+        acc[field.tab] = [];
+      }
+      acc[field.tab].push(field.label);
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    return { missingFields, missingByTab };
+  };
+
+  // Scroll functionality is now directly in the form submission handler
+
+  // Simplified onSubmit function that skips the API call
   const onSubmit = async (data: FormValues) => {
-    console.log("onSubmit function called with data:", data);
+    console.log("🔍 onSubmit function called with data:", data);
     setIsSubmitting(true);
 
     // Always show a toast to confirm the submission attempt
@@ -177,68 +249,35 @@ export default function ClientIntakeForm() {
       duration: 3000,
     });
 
-    // Check if there are any errors and identify which tabs have errors
-    const errorTabs = [];
+    // TEMPORARY: Skip API call and just show success
+    console.log("✅ Form validation passed! Skipping API call for debugging.");
 
-    // Basic tab errors
-    if (
-      errors.businessName ||
-      errors.industry ||
-      errors.contactName ||
-      errors.contactEmail ||
-      errors.contactPhone ||
-      errors.preferredContact
-    ) {
-      errorTabs.push("basic");
-    }
+    // Show success toast
+    toast({
+      title: "Form validated successfully!",
+      description: "Form data is valid. API call skipped for debugging.",
+      duration: 3000,
+    });
 
-    // Website tab errors
-    if (errors.targetAudience || errors.expectedPages) {
-      errorTabs.push("website");
-    }
+    // Log that we would redirect
+    console.log("Would redirect to thank-you page...");
 
-    // Technical tab errors
-    if (errors.domainStatus || errors.hostingPreference) {
-      errorTabs.push("technical");
-    }
+    // TEMPORARY: Redirect after a delay without making API call
+    setTimeout(() => {
+      console.log("Executing redirect using Next.js router");
+      router.push("/thank-you", { scroll: true });
+    }, 2000);
 
-    // Project tab errors
-    if (errors.budgetRange || errors.timeline || errors.maintenanceNeeds) {
-      errorTabs.push("project");
-    }
+    setIsSubmitting(false);
+  };
 
-    // Marketing tab errors
-    if (errors.newsletterConsent) {
-      errorTabs.push("marketing");
-    }
-
-    // Update the state with tabs that have errors
-    setTabsWithErrors(errorTabs);
-
-    // Show error message if there are errors
-    if (errorTabs.length > 0) {
-      console.log("Form has errors in tabs:", errorTabs);
-      setIsSubmitting(false);
-
-      // Navigate to the first tab with errors
-      setCurrentTab(errorTabs[0]);
-
-      toast({
-        title: "Please fix the errors",
-        description: `There are errors in the ${errorTabs.join(
-          ", "
-        )} section(s). Please check and try again.`,
-        variant: "destructive",
-        duration: 5000,
-      });
-
-      return;
-    }
-
+  /* Original onSubmit function with API call (for reference)
+  const onSubmitWithAPI = async (data: FormValues) => {
     try {
       console.log("Submitting form data to API...");
 
       // Submit the form data to the API and await the response
+      console.log("Sending data to /api/submit:", JSON.stringify(data));
       const response = await fetch("/api/submit", {
         method: "POST",
         headers: {
@@ -247,73 +286,149 @@ export default function ClientIntakeForm() {
         body: JSON.stringify(data),
       });
 
+      console.log("API response status:", response.status);
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
 
       // Wait for the JSON response
       const result = await response.json();
-      console.log("API response:", result);
+      console.log("API response data:", result);
 
       // Ensure the API call is complete (which includes email sending)
       if (!result.success) {
         throw new Error("Form submission was not successful");
       }
 
-      // Show success toast
-      toast({
-        title: "Form submitted successfully!",
-        description:
-          "We've received your information and will be in touch soon.",
-        duration: 3000,
-      });
-
-      // IMPORTANT: This is the key part - redirect to thank you page
-      console.log(
-        "Form submitted successfully, redirecting to thank you page..."
-      );
-
-      // Use setTimeout to ensure the toast is visible before redirecting
-      // This delay gives time for the email sending process to complete
-      setTimeout(() => {
-        console.log("Executing redirect using Next.js router");
-        // Use Next.js router for programmatic navigation
-        router.push("/thank-you");
-      }, 2000); // Increased timeout to ensure emails have time to be sent
+      return true;
     } catch (error) {
-      console.error("Submission error:", error);
-      toast({
-        title: "Something went wrong",
-        description: "Your form couldn't be submitted. Please try again later.",
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setIsSubmitting(false);
+      console.error("API submission error:", error);
+      return false;
     }
   };
-
-  const { toast } = useToast();
+  */
 
   // We're now redirecting to a dedicated thank you page instead of showing an inline success message
 
   return (
     <div>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      {/* Error message when tabs have errors */}
+      {tabsWithErrors.length > 0 && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-red-500"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Please complete all required fields
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>
+                  The following sections have incomplete required fields:
+                  <span className="font-semibold">
+                    {" "}
+                    {tabsWithErrors
+                      .map((tab) => tabDisplayNames[tab] || tab)
+                      .join(", ")}
+                  </span>
+                  . Please complete all required fields in these sections.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <form
+        id="client-intake-form"
+        onSubmit={(e) => {
+          e.preventDefault(); // Prevent default form submission
+          console.log("🔔 Form submit event triggered", e);
+          console.log("🔔 Form is valid:", Object.keys(errors).length === 0);
+          console.log("🔔 Current tab:", currentTab);
+
+          // Check for missing required fields before submitting
+          const { missingByTab } = checkMissingRequiredFields();
+          const errorTabs = Object.keys(missingByTab);
+
+          // Update the tabs with errors state
+          console.log(
+            "Setting tabs with errors from submit handler:",
+            errorTabs
+          );
+          setTabsWithErrors(errorTabs);
+
+          if (errorTabs.length > 0) {
+            // If there are errors, show the error message and navigate to the first tab with errors
+            console.log("❌ Form has errors in tabs:", errorTabs);
+            setCurrentTab(errorTabs[0]);
+
+            // Create a more detailed error message
+            const errorDetails = Object.entries(missingByTab)
+              .map(
+                ([tab, fields]) =>
+                  `${tabDisplayNames[tab] || tab}: ${fields.join(", ")}`
+              )
+              .join("\n");
+
+            toast({
+              title: "Incomplete Form",
+              description: `Please complete all required fields in the ${errorTabs
+                .map((tab) => tabDisplayNames[tab] || tab)
+                .join(", ")} section(s). Look for sections highlighted in red.`,
+              variant: "destructive",
+              duration: 5000,
+            });
+
+            console.log("Missing required fields:", errorDetails);
+
+            // Scroll to the first error
+            setTimeout(() => {
+              const firstError = document.querySelector(".text-red-500");
+              if (firstError) {
+                firstError.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+              }
+            }, 100);
+
+            return false;
+          } else {
+            // If there are no errors, process the form
+            handleSubmit((data) => {
+              console.log("🔔 handleSubmit callback executed with data:", data);
+              onSubmit(data);
+            })(e);
+          }
+        }}
+      >
         <Tabs value={currentTab} onValueChange={setCurrentTab}>
           <TabsList className="grid grid-cols-6 mb-8">
             <TabsTrigger
               value="basic"
               className={
                 tabsWithErrors.includes("basic")
-                  ? "border-red-500 border-b-2"
+                  ? "border-red-500 border-2 text-red-500 font-semibold"
                   : ""
               }
             >
               {tabsWithErrors.includes("basic") ? (
                 <span className="flex items-center">
                   Basic Info
-                  <span className="ml-1 text-red-500">*</span>
+                  <span className="ml-1 text-red-500">!</span>
                 </span>
               ) : (
                 "Basic Info"
@@ -323,14 +438,14 @@ export default function ClientIntakeForm() {
               value="branding"
               className={
                 tabsWithErrors.includes("branding")
-                  ? "border-red-500 border-b-2"
+                  ? "border-red-500 border-2 text-red-500 font-semibold"
                   : ""
               }
             >
               {tabsWithErrors.includes("branding") ? (
                 <span className="flex items-center">
                   Branding
-                  <span className="ml-1 text-red-500">*</span>
+                  <span className="ml-1 text-red-500">!</span>
                 </span>
               ) : (
                 "Branding"
@@ -340,14 +455,14 @@ export default function ClientIntakeForm() {
               value="website"
               className={
                 tabsWithErrors.includes("website")
-                  ? "border-red-500 border-b-2"
+                  ? "border-red-500 border-2 text-red-500 font-semibold"
                   : ""
               }
             >
               {tabsWithErrors.includes("website") ? (
                 <span className="flex items-center">
                   Website Needs
-                  <span className="ml-1 text-red-500">*</span>
+                  <span className="ml-1 text-red-500">!</span>
                 </span>
               ) : (
                 "Website Needs"
@@ -357,14 +472,14 @@ export default function ClientIntakeForm() {
               value="technical"
               className={
                 tabsWithErrors.includes("technical")
-                  ? "border-red-500 border-b-2"
+                  ? "border-red-500 border-2 text-red-500 font-semibold"
                   : ""
               }
             >
               {tabsWithErrors.includes("technical") ? (
                 <span className="flex items-center">
                   Technical
-                  <span className="ml-1 text-red-500">*</span>
+                  <span className="ml-1 text-red-500">!</span>
                 </span>
               ) : (
                 "Technical"
@@ -374,14 +489,14 @@ export default function ClientIntakeForm() {
               value="project"
               className={
                 tabsWithErrors.includes("project")
-                  ? "border-red-500 border-b-2"
+                  ? "border-red-500 border-2 text-red-500 font-semibold"
                   : ""
               }
             >
               {tabsWithErrors.includes("project") ? (
                 <span className="flex items-center">
                   Project Details
-                  <span className="ml-1 text-red-500">*</span>
+                  <span className="ml-1 text-red-500">!</span>
                 </span>
               ) : (
                 "Project Details"
@@ -391,14 +506,14 @@ export default function ClientIntakeForm() {
               value="marketing"
               className={
                 tabsWithErrors.includes("marketing")
-                  ? "border-red-500 border-b-2"
+                  ? "border-red-500 border-2 text-red-500 font-semibold"
                   : ""
               }
             >
               {tabsWithErrors.includes("marketing") ? (
                 <span className="flex items-center">
                   Marketing
-                  <span className="ml-1 text-red-500">*</span>
+                  <span className="ml-1 text-red-500">!</span>
                 </span>
               ) : (
                 "Marketing"
@@ -417,7 +532,9 @@ export default function ClientIntakeForm() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="businessName">Business Name *</Label>
+                  <Label htmlFor="businessName" className="flex items-center">
+                    Business Name <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Input
                     id="businessName"
                     {...register("businessName")}
@@ -445,7 +562,9 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="industry">Industry/Sector *</Label>
+                  <Label htmlFor="industry" className="flex items-center">
+                    Industry/Sector <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Input
                     id="industry"
                     {...register("industry")}
@@ -460,7 +579,10 @@ export default function ClientIntakeForm() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="contactName">Contact Person's Name *</Label>
+                    <Label htmlFor="contactName" className="flex items-center">
+                      Contact Person's Name{" "}
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="contactName"
                       {...register("contactName")}
@@ -474,7 +596,9 @@ export default function ClientIntakeForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="contactEmail">Email Address *</Label>
+                    <Label htmlFor="contactEmail" className="flex items-center">
+                      Email Address <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="contactEmail"
                       type="email"
@@ -490,7 +614,9 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contactPhone">Phone Number *</Label>
+                  <Label htmlFor="contactPhone" className="flex items-center">
+                    Phone Number <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Input
                     id="contactPhone"
                     {...register("contactPhone")}
@@ -504,8 +630,16 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Preferred Contact Method *</Label>
+                  <Label
+                    htmlFor="preferredContact"
+                    className="flex items-center"
+                  >
+                    Preferred Contact Method{" "}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <RadioGroup
+                    id="preferredContact"
+                    name="preferredContact"
                     value={watch("preferredContact")}
                     onValueChange={(value) =>
                       setValue("preferredContact", value as any)
@@ -561,14 +695,17 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Brand Style *</Label>
+                  <Label htmlFor="brandStyle" className="flex items-center">
+                    Brand Style <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Select
                     defaultValue="modern"
                     onValueChange={(value) =>
                       setValue("brandStyle", value as any)
                     }
+                    name="brandStyle"
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="brandStyle">
                       <SelectValue placeholder="Select a style" />
                     </SelectTrigger>
                     <SelectContent>
@@ -584,7 +721,11 @@ export default function ClientIntakeForm() {
 
                   {watchBrandStyle === "other" && (
                     <div className="mt-2">
+                      <Label htmlFor="brandStyleOther" className="sr-only">
+                        Other Brand Style
+                      </Label>
                       <Input
+                        id="brandStyleOther"
                         placeholder="Please specify your brand style"
                         {...register("brandStyleOther")}
                       />
@@ -612,8 +753,13 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Do you have an existing logo? *</Label>
+                  <Label htmlFor="hasLogo" className="flex items-center">
+                    Do you have an existing logo?{" "}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <RadioGroup
+                    id="hasLogo"
+                    name="hasLogo"
                     value={watchHasLogo || "no"}
                     onValueChange={(value) => setValue("hasLogo", value as any)}
                   >
@@ -679,14 +825,17 @@ export default function ClientIntakeForm() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Website Purpose *</Label>
+                  <Label htmlFor="websitePurpose" className="flex items-center">
+                    Website Purpose <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Select
                     defaultValue="informational"
                     onValueChange={(value) =>
                       setValue("websitePurpose", value as any)
                     }
+                    name="websitePurpose"
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="websitePurpose">
                       <SelectValue placeholder="Select a purpose" />
                     </SelectTrigger>
                     <SelectContent>
@@ -703,7 +852,11 @@ export default function ClientIntakeForm() {
 
                   {watchWebsitePurpose === "other" && (
                     <div className="mt-2">
+                      <Label htmlFor="purposeOther" className="sr-only">
+                        Other Website Purpose
+                      </Label>
                       <Input
+                        id="purposeOther"
                         placeholder="Please specify your website purpose"
                         {...register("purposeOther")}
                       />
@@ -712,7 +865,9 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="targetAudience">Target Audience *</Label>
+                  <Label htmlFor="targetAudience" className="flex items-center">
+                    Target Audience <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Textarea
                     id="targetAudience"
                     {...register("targetAudience")}
@@ -727,7 +882,9 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Key Features Needed</Label>
+                  <div id="keyFeatures" className="mb-2">
+                    Key Features Needed
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -888,8 +1045,9 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="expectedPages">
-                    Estimated Number of Pages *
+                  <Label htmlFor="expectedPages" className="flex items-center">
+                    Estimated Number of Pages{" "}
+                    <span className="text-red-500 ml-1">*</span>
                   </Label>
                   <Input
                     id="expectedPages"
@@ -901,6 +1059,10 @@ export default function ClientIntakeForm() {
                       {errors.expectedPages.message}
                     </p>
                   )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This is a required field. Please provide an estimate of how
+                    many pages you need.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -917,8 +1079,13 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Is Your Content Ready? *</Label>
+                  <Label htmlFor="contentReady" className="flex items-center">
+                    Is Your Content Ready?{" "}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <RadioGroup
+                    id="contentReady"
+                    name="contentReady"
                     value={watchContentReady}
                     onValueChange={(value) =>
                       setValue("contentReady", value as any)
@@ -1004,8 +1171,12 @@ export default function ClientIntakeForm() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Domain Status *</Label>
+                  <Label htmlFor="domainStatus" className="flex items-center">
+                    Domain Status <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <RadioGroup
+                    id="domainStatus"
+                    name="domainStatus"
                     value={watchDomainStatus || "unsure"}
                     onValueChange={(value) =>
                       setValue("domainStatus", value as any)
@@ -1062,8 +1233,16 @@ export default function ClientIntakeForm() {
                 )}
 
                 <div className="space-y-2">
-                  <Label>Hosting Preference *</Label>
+                  <Label
+                    htmlFor="hostingPreference"
+                    className="flex items-center"
+                  >
+                    Hosting Preference{" "}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <RadioGroup
+                    id="hostingPreference"
+                    name="hostingPreference"
                     value={watchHostingPreference || "recommend"}
                     onValueChange={(value) =>
                       setValue("hostingPreference", value as any)
@@ -1105,7 +1284,9 @@ export default function ClientIntakeForm() {
                 )}
 
                 <div className="space-y-2">
-                  <Label>Integration Requirements</Label>
+                  <div id="integrations" className="mb-2">
+                    Integration Requirements
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -1214,7 +1395,9 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Analytics Needs</Label>
+                  <div id="analyticsNeeds" className="mb-2">
+                    Analytics Needs
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -1314,8 +1497,12 @@ export default function ClientIntakeForm() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Budget Range *</Label>
+                  <Label htmlFor="budgetRange" className="flex items-center">
+                    Budget Range <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <RadioGroup
+                    id="budgetRange"
+                    name="budgetRange"
                     value={watch("budgetRange")}
                     onValueChange={(value) =>
                       setValue("budgetRange", value as any)
@@ -1356,8 +1543,13 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Timeline Expectations *</Label>
+                  <Label htmlFor="timeline" className="flex items-center">
+                    Timeline Expectations{" "}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <RadioGroup
+                    id="timeline"
+                    name="timeline"
                     value={watch("timeline")}
                     onValueChange={(value) =>
                       setValue("timeline", value as any)
@@ -1393,8 +1585,16 @@ export default function ClientIntakeForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Maintenance Needs After Launch *</Label>
+                  <Label
+                    htmlFor="maintenanceNeeds"
+                    className="flex items-center"
+                  >
+                    Maintenance Needs After Launch{" "}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <RadioGroup
+                    id="maintenanceNeeds"
+                    name="maintenanceNeeds"
                     value={watch("maintenanceNeeds")}
                     onValueChange={(value) =>
                       setValue("maintenanceNeeds", value as any)
@@ -1494,7 +1694,15 @@ export default function ClientIntakeForm() {
                   Previous
                 </Button>
                 <div className="space-y-4">
-                  <Button type="submit" disabled={isSubmitting}>
+                  {/* Regular submit button */}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      console.log("Submit button clicked");
+                      // Don't add any additional logic here that might interfere with form submission
+                    }}
+                  >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1503,6 +1711,97 @@ export default function ClientIntakeForm() {
                     ) : (
                       "Submit Intake Form"
                     )}
+                  </Button>
+
+                  {/* Debug button - for testing only */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      console.log("Debug button clicked");
+                      console.log("Current form values:", watch());
+
+                      // Show detailed error information
+                      console.log("Current errors:", errors);
+                      console.log("Error keys:", Object.keys(errors));
+
+                      // Log each error in detail
+                      Object.entries(errors).forEach(([field, error]) => {
+                        console.log(`Error in field '${field}':`, error);
+                      });
+
+                      // Show which required fields are missing
+                      const requiredFields = [
+                        "businessName",
+                        "industry",
+                        "contactName",
+                        "contactEmail",
+                        "contactPhone",
+                        "preferredContact",
+                        "targetAudience",
+                        "expectedPages",
+                        "domainStatus",
+                        "hostingPreference",
+                        "budgetRange",
+                        "timeline",
+                        "maintenanceNeeds",
+                      ] as const;
+
+                      const formValues = watch();
+                      const missingFields = requiredFields.filter((field) => {
+                        const value = formValues[field];
+                        return (
+                          !value ||
+                          (typeof value === "string" && value.trim() === "")
+                        );
+                      });
+
+                      console.log("Missing required fields:", missingFields);
+
+                      // Manually trigger form submission
+                      handleSubmit((data) => {
+                        console.log(
+                          "Manual form submission triggered with data:",
+                          data
+                        );
+                        onSubmit(data);
+                      })();
+                    }}
+                  >
+                    Debug Submit
+                  </Button>
+
+                  {/* Fill test data button */}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      console.log("Filling form with test data");
+
+                      // Fill required fields with test data
+                      setValue("businessName", "Test Business");
+                      setValue("industry", "Technology");
+                      setValue("contactName", "John Doe");
+                      setValue("contactEmail", "john@example.com");
+                      setValue("contactPhone", "1234567890");
+                      setValue("preferredContact", "email");
+                      setValue("targetAudience", "Small businesses");
+                      setValue("expectedPages", "5-10");
+                      setValue("domainStatus", "owned");
+                      setValue("existingDomain", "example.com");
+                      setValue("hostingPreference", "recommend");
+                      setValue("budgetRange", "3000-5000");
+                      setValue("timeline", "1-2months");
+                      setValue("maintenanceNeeds", "updates-only");
+
+                      toast({
+                        title: "Test data filled",
+                        description: "Form has been filled with test data",
+                        duration: 3000,
+                      });
+                    }}
+                  >
+                    Fill Test Data
                   </Button>
                 </div>
               </CardFooter>
