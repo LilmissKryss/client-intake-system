@@ -237,7 +237,7 @@ export default function ClientIntakeForm() {
 
   // Scroll functionality is now directly in the form submission handler
 
-  // Simplified onSubmit function that skips the API call
+  // Form submission handler with API call
   const onSubmit = async (data: FormValues) => {
     console.log("🔍 onSubmit function called with data:", data);
     setIsSubmitting(true);
@@ -249,26 +249,55 @@ export default function ClientIntakeForm() {
       duration: 3000,
     });
 
-    // TEMPORARY: Skip API call and just show success
-    console.log("✅ Form validation passed! Skipping API call for debugging.");
+    try {
+      console.log("Submitting form data to API...");
 
-    // Show success toast
-    toast({
-      title: "Form validated successfully!",
-      description: "Form data is valid. API call skipped for debugging.",
-      duration: 3000,
-    });
+      // Submit the form data to the API
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
 
-    // Log that we would redirect
-    console.log("Would redirect to thank-you page...");
+      console.log("API response status:", response.status);
 
-    // TEMPORARY: Redirect after a delay without making API call
-    setTimeout(() => {
-      console.log("Executing redirect using Next.js router");
-      router.push("/thank-you", { scroll: true });
-    }, 2000);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API error response:", errorText);
+        throw new Error(
+          `Network response was not ok: ${response.status} ${errorText}`
+        );
+      }
 
-    setIsSubmitting(false);
+      const result = await response.json();
+      console.log("API response data:", result);
+
+      // Show success toast
+      toast({
+        title: "Form submitted successfully!",
+        description:
+          "We've received your information and will be in touch soon.",
+        duration: 3000,
+      });
+
+      // Redirect to thank you page
+      console.log("Redirecting to thank-you page...");
+      setTimeout(() => {
+        window.location.href = "/thank-you";
+      }, 1000);
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast({
+        title: "Something went wrong",
+        description: "Your form couldn't be submitted. Please try again later.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   /* Original onSubmit function with API call (for reference)

@@ -28,7 +28,7 @@ export default function RootLayout({
       <head>
         <meta
           httpEquiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' vitals.vercel-insights.com localhost:*; img-src 'self' data:; form-action 'self';"
+          content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' assets.calendly.com *.vercel.app; style-src 'self' 'unsafe-inline' assets.calendly.com; connect-src 'self' vitals.vercel-insights.com localhost:* *.localhost:* calendly.com *.calendly.com; img-src 'self' data: assets.calendly.com; frame-src calendly.com *.calendly.com; font-src 'self' assets.calendly.com; form-action 'self';"
         />
       </head>
       <body
