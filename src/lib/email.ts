@@ -17,36 +17,29 @@ const DEVELOPER_EMAIL = process.env.DEVELOPER_EMAIL || "you@example.com";
 export async function sendConfirmationEmail(
   clientEmail: string,
   clientName: string,
-  businessName: string
+  _businessName: string // Prefixed with underscore to indicate it's not used
 ) {
+  // Extract first name from the full name
+  const firstName = clientName.split(" ")[0];
+
   const message = {
-    from: `"Your Web Development" <${process.env.EMAIL_USER}>`,
+    from: `"Krystal Hardin" <${process.env.EMAIL_USER}>`,
     to: clientEmail,
-    subject: "Thank You for Your Website Project Details",
+    subject: "Thank You for Your Submission!",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 5px;">
-        <h2 style="color: #333; border-bottom: 1px solid #eaeaea; padding-bottom: 10px;">Thank You, ${clientName}!</h2>
+        <p>Hi ${firstName},</p>
 
-        <p>I've received your information about <strong>${businessName}</strong> and your website needs.</p>
+        <p>Thank you for completing the intake form — I'm excited to learn more about your goals and how I can support you.</p>
 
-        <p>Here's what happens next:</p>
-        <ol style="line-height: 1.6;">
-          <li>I'll review all the details you've provided</li>
-          <li>I'll prepare some initial thoughts and questions about your project</li>
-          <li>I'll contact you within 1-2 business days to discuss next steps</li>
-        </ol>
+        <p>I'll review your submission shortly and reach out within 24-48 hours to follow up or confirm next steps. In the meantime, feel free to reply to this email if you have any questions.</p>
 
-        <p>If you have any questions in the meantime or need to add any information to your submission, please don't hesitate to reach out.</p>
+        <p>Looking forward to connecting soon!</p>
 
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eaeaea;">
-          <p style="margin-bottom: 5px;">Best regards,</p>
-          <p style="margin-top: 0; font-weight: bold;">Your Name</p>
-          <p style="margin-top: 0; color: #666;">Web Developer</p>
-          <p style="margin-top: 0; color: #666;">
-            <a href="mailto:${process.env.DEVELOPER_EMAIL}" style="color: #0070f3; text-decoration: none;">
-              ${process.env.DEVELOPER_EMAIL}
-            </a>
-          </p>
+          <p style="margin-bottom: 5px;">Warmly,</p>
+          <p style="margin-top: 0; font-weight: bold;">Krystal</p>
+          <p style="margin-top: 0; color: #666;">Web Developer & Designer</p>
         </div>
       </div>
     `,
@@ -91,12 +84,12 @@ export async function sendNotificationEmail(formData: any) {
   };
 
   const message = {
-    from: `"Intake Form" <${process.env.EMAIL_USER}>`,
+    from: `"Client Intake System" <${process.env.EMAIL_USER}>`,
     to: DEVELOPER_EMAIL,
-    subject: `New Project Inquiry: ${formData.businessName}`,
+    subject: `New Client Inquiry: ${formData.businessName} - ${formData.industry}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-        <h2>New Project Inquiry</h2>
+        <h2>New Client Inquiry</h2>
         <p><strong>Business:</strong> ${formData.businessName}</p>
         <p><strong>Contact:</strong> ${formData.contactName} (${
       formData.contactEmail
