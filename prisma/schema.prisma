@@ -13,3 +13,27 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Client model for basic information
+model Client {
+  id                String           @id @default(uuid())
+  businessName      String
+  website           String?
+  industry          String
+  contactName       String
+  contactEmail      String
+  contactPhone      String
+  preferredContact  String
+  newsletterConsent Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  formSubmissions   FormSubmission[]
+}
+
+// Form submission model for detailed data
+model FormSubmission {
+  id          String   @id @default(uuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  formData    String   // JSON string of all form data
+  submittedAt DateTime @default(now())
+}
